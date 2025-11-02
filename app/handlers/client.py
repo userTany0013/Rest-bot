@@ -44,22 +44,22 @@ async def reserv(message: Message, state: FSMContext):
 
 @client.message(StateFilter('month'))
 async def date(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(month=callback.data)
-    await callback.message.answer('Выберите день:', reply_markup=await kb.day(callback.data))
+    await state.update_data(month=callback.data.split('_')[1])
+    await callback.message.answer('Выберите день:', reply_markup=await kb.day(callback.data.split('_')[1]))
     await state.set_state('day')
 
 
 @client.message(StateFilter('day'))
 async def day(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(day=callback.data)
-    await callback.message.answer('Выберите время:', reply_markup=await kb.time(callback.data))
+    await state.update_data(day=callback.data.split('_')[1])
+    await callback.message.answer('Выберите время:', reply_markup=await kb.time(callback.data.split('_')[1]))
     await state.set_state('time')
 
 
 @client.message(StateFilter('time'))
 async def time(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(time=callback.data)
-    await callback.message.answer('Выберите столик:', reply_markup=await kb.table(callback.data))
+    await state.update_data(time=callback.data.split('_')[1])
+    await callback.message.answer('Выберите столик:', reply_markup=await kb.table(callback.data.split('_')[1]))
     await state.set_state('table')
 
 
@@ -87,7 +87,7 @@ async def comment(callback: CallbackQuery, state: FSMContext):
     table=await data.get('table'),
     quantity=await data.get('quantity'),
     comment=callback.data
-    await booking(month=month,
+    book = await booking(month=month,
                   day=day,
                   time=time,
                   table=table,
@@ -95,7 +95,7 @@ async def comment(callback: CallbackQuery, state: FSMContext):
                   comment=comment)
     await state.clear()
     full_info = f'Клиент: {user_name}\n Номер телефона: {user_phone}\n Месяц: {month}\n Число: {day}\n Время: {time}\n Столик: {table}\n Колличество: {quantity}\n Комментарий: {comment}'
-    await callback.message.bot.send_message(..., text=full_info)
+    await callback.message.bot.send_message(..., text=full_info, reply_markup=await kb.admin(...))
     await callback.message.answer('Бронь добавлена, ожидайте подтверждения.', reply_markup=await kb.menu)
 
 
@@ -159,6 +159,6 @@ async def delete(callback: CallbackQuery):
     await delete_book(callback.data.split('_')[1])
     await callback.message.answer('Бронь удалена', reply_markup=await kb.books(callback.message.from_user.id))
 
-@client.callback_query(F.data.startswith('no_'))
+@client.callback_query(F.data.startswith('no'))
 async def no_delete(callback: CallbackQuery):
     await callback.message.answer('Ваши брони:', reply_markup=await kb.books(callback.from_user.id))
