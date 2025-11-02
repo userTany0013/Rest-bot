@@ -5,13 +5,15 @@ from aiogram.fsm.context import FSMContext
 
 import app.keyboards.client as kb
 
+from app.database.requests.client import get_user, set_user, user, booking, get_book, update_quantity, update_comment, delete_book
+
 
 client = Router()
 
 
 @client.message(CommandStart)
 async def start_menu(message: Message, state: FSMContext):
-    is_user = await set_user(message.from_user.id)
+    is_user = await get_user(message.from_user.id)
     if not is_user:
         await message.answer('Добро пожаловать! Пройдите регистрацию',
                              reply_markup=await kb.reg_name(message.from_user.first_name))
@@ -32,7 +34,7 @@ async def name(message: Message, state: FSMContext):
 async def register(message: Message, state: FSMContext):
     await state.update_data(name=message.contact.phone_number)
     data = await state.get_data()
-    await update_user(message.from_user.id, data['name'], data['phone'])
+    await set_user(message.from_user.id, data['name'], data['phone'])
     await message.answer('Вы зарегестрированы!', reply_markup=await kb.menu())
 
 
@@ -52,14 +54,14 @@ async def date(callback: CallbackQuery, state: FSMContext):
 @client.message(StateFilter('day'))
 async def day(callback: CallbackQuery, state: FSMContext):
     await state.update_data(day=callback.data.split('_')[1])
-    await callback.message.answer('Выберите время:', reply_markup=await kb.time(callback.data.split('_')[1]))
+    await callback.message.answer('Выберите время:', reply_markup=await kb.time(callback.data.split('_')[1], callback.data.split('_')[2]))
     await state.set_state('time')
 
 
 @client.message(StateFilter('time'))
 async def time(callback: CallbackQuery, state: FSMContext):
     await state.update_data(time=callback.data.split('_')[1])
-    await callback.message.answer('Выберите столик:', reply_markup=await kb.table(callback.data.split('_')[1]))
+    await callback.message.answer('Выберите столик:', reply_markup=await kb.table(callback.data.split('_')[1], callback.data.split('_')[2], callback.data.split('_')[3]))
     await state.set_state('table')
 
 
@@ -87,7 +89,8 @@ async def comment(callback: CallbackQuery, state: FSMContext):
     table=await data.get('table'),
     quantity=await data.get('quantity'),
     comment=callback.data
-    book = await booking(month=month,
+    book = await booking(user_id=callback.from_user.id,
+                  month=month,
                   day=day,
                   time=time,
                   table=table,

@@ -33,6 +33,12 @@ class Time(Base):
 
     id: Mapped[int] = mapped_column(primary_key = True)
     value: Mapped[str] = mapped_column(String(5))
+
+
+class Table(Base):
+    tablename = 'tables'
+
+    id: Mapped[int] = mapped_column(primary_key = True)
  
  
 class Book(Base):
@@ -40,12 +46,13 @@ class Book(Base):
  
     id: Mapped[int] = mapped_column(primary_key = True)
     date: Mapped[int] = mapped_column(ForeignKey('dates.id'))
-    dey: Mapped[int]
+    day: Mapped[int]
     time: Mapped[str] = mapped_column(ForeignKey('times.id'))
-    table: Mapped[int]
+    table: Mapped[int] = mapped_column(ForeignKey('tables.id'))
     quantity: Mapped[int]
     comment: Mapped[str] = mapped_column(String(125))
-    user_ig: Mapped[int] = mapped_column(ForeignKey('users.tg_id'))
+    status: Mapped[str] = mapped_column(String(5))
+    user_tg: Mapped[int] = mapped_column(ForeignKey('users.tg_id'))
 
 
 async def init_models():

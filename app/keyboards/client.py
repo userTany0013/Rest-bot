@@ -3,6 +3,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from datetime import date
 
+from app.database.requests.client import get_months, get_deys, get_times, get_tables, get_books
+
 
 menu = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text='забронировать столик'),
@@ -33,8 +35,7 @@ input_field_placeholder='Введите номер'
 
 
 async def month():
-    today = str(date.today())
-    available_months =await get_months(today)
+    available_months =await get_months()
     keyboard = InlineKeyboardBuilder()
     for month in available_months:
         keyboard.add(InlineKeyboardButton(text=f'{month.name}',
@@ -43,31 +44,29 @@ async def month():
 
 
 async def day(month):
-    today = str(date.today())
-    available_days =await get_deys(today)
+    available_days =await get_deys(month)
     keyboard = InlineKeyboardBuilder()
     for day in available_days:
-        keyboard.add(InlineKeyboardButton(text=f'{day.name}',
-                                           callback_data=f'month_{day.id}'))
+        keyboard.add(InlineKeyboardButton(text=f'{day}',
+                                           callback_data=f'day_{day}_{month}'))
     return keyboard.adjust(2).as_markup()
 
 
-async def time(day):
-    now = str(date.today())
-    times =await get_times(now)
+async def time(day, month):
+    times =await get_times(day, month)
     keyboard = InlineKeyboardBuilder()
     for time in times:
         keyboard.add(InlineKeyboardButton(text=f'{time.name}',
-                                           callback_data=f'month_{time.id}'))
+                                           callback_data=f'time_{time.id}_{day}_{month}'))
     return keyboard.adjust(2).as_markup()
 
 
-async def table(time):
+async def table(time, day, month):
     tables = await get_tables(time)
     keyboard = InlineKeyboardBuilder()
     for table in tables:
         keyboard.add(InlineKeyboardButton(text=f'{table.name}',
-                                           callback_data=f'month_{table.id}'))
+                                           callback_data=f'table_{table.id}'))
     return keyboard.adjust(2).as_markup()
 
 
