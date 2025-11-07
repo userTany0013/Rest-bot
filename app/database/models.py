@@ -2,7 +2,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import BigInteger, String, ForeignKey
 
-engine = create_async_engine(url='sqlite+aiosqlite:///database.db',
+from data import URL
+
+engine = create_async_engine(url=URL,
                              echo=True)
 
 async_session = async_sessionmaker(engine)
@@ -13,7 +15,7 @@ class Base(AsyncAttrs, DeclarativeBase):
  
 
 class User(Base):
-    tablename = 'users'
+    __tablename__ = 'users'
  
     tg_id = mapped_column(BigInteger, primary_key = True)
     name: Mapped[str] = mapped_column(String(30))
@@ -21,28 +23,29 @@ class User(Base):
 
 
 class Date(Base):
-    tablename = 'dates'
+    __tablename__ = 'dates'
 
     id: Mapped[int] = mapped_column(primary_key = True)
     year: Mapped[int]
-    month: Mapped[str] = mapped_column (String(10))
+    month: Mapped[int]
 
 
 class Time(Base):
-    tablename = 'times'
+    __tablename__ = 'times'
 
     id: Mapped[int] = mapped_column(primary_key = True)
-    value: Mapped[str] = mapped_column(String(5))
+    hour: Mapped[int]
+    minute: Mapped[int]
 
 
 class Table(Base):
-    tablename = 'tables'
+    __tablename__ = 'tables'
 
     id: Mapped[int] = mapped_column(primary_key = True)
  
  
 class Book(Base):
-    tablename = 'books'
+    __tablename__ = 'books'
  
     id: Mapped[int] = mapped_column(primary_key = True)
     date: Mapped[int] = mapped_column(ForeignKey('dates.id'))
@@ -53,6 +56,12 @@ class Book(Base):
     comment: Mapped[str] = mapped_column(String(125))
     status: Mapped[str] = mapped_column(String(5))
     user_tg: Mapped[int] = mapped_column(ForeignKey('users.tg_id'))
+
+
+class Image(Base):
+    __tablename__ = 'images'
+
+    tg_id: Mapped[str] = mapped_column(primary_key = True)
 
 
 async def init_models():

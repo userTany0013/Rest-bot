@@ -5,13 +5,15 @@ from aiogram.fsm.context import FSMContext
 
 import app.keyboards.client as kb
 
-from app.database.requests.client import get_user, set_user, user, booking, get_book, update_quantity, update_comment, delete_book
+from data import ADMIN_GROUP
+
+from app.database.requests.client import get_user, set_user, user_get, booking, get_book, update_quantity, update_comment, delete_book, photo_id
 
 
 client = Router()
 
 
-@client.message(CommandStart)
+@client.message(CommandStart())
 async def start_menu(message: Message, state: FSMContext):
     is_user = await get_user(message.from_user.id)
     if not is_user:
@@ -19,7 +21,7 @@ async def start_menu(message: Message, state: FSMContext):
                              reply_markup=await kb.reg_name(message.from_user.first_name))
         await state.set_state('reg_name')
     else:
-        await message.answer('Добро пожаловать! Выберите пункт меню:', reply_markup=await kb.menu())
+        await message.answer('Добро пожаловать! Выберите пункт меню:', reply_markup=kb.menu)
 
 
 @client.message(StateFilter('reg_name'))
@@ -32,10 +34,10 @@ async def name(message: Message, state: FSMContext):
 
 @client.message(StateFilter('reg_phone'), F.contact)
 async def register(message: Message, state: FSMContext):
-    await state.update_data(name=message.contact.phone_number)
+    await state.update_data(phone=message.contact.phone_number)
     data = await state.get_data()
     await set_user(message.from_user.id, data['name'], data['phone'])
-    await message.answer('Вы зарегестрированы!', reply_markup=await kb.menu())
+    await message.answer('Вы зарегестрированы!', reply_markup=kb.menu)
 
 
 @client.message(F.text == 'забронировать столик')
@@ -44,62 +46,72 @@ async def reserv(message: Message, state: FSMContext):
     await state.set_state('month')
 
 
-@client.message(StateFilter('month'))
+@client.callback_query(StateFilter('month'))
 async def date(callback: CallbackQuery, state: FSMContext):
     await state.update_data(month=callback.data.split('_')[1])
     await callback.message.answer('Выберите день:', reply_markup=await kb.day(callback.data.split('_')[1]))
     await state.set_state('day')
 
 
-@client.message(StateFilter('day'))
+@client.callback_query(StateFilter('day'), F.data.startswith('day_'))
 async def day(callback: CallbackQuery, state: FSMContext):
     await state.update_data(day=callback.data.split('_')[1])
-    await callback.message.answer('Выберите время:', reply_markup=await kb.time(callback.data.split('_')[1], callback.data.split('_')[2]))
+    data = await state.get_data()
+    month = data.get('month')
+    await callback.message.answer('Выберите время:', reply_markup=await kb.time(callback.data.split('_')[1], month))
     await state.set_state('time')
 
 
-@client.message(StateFilter('time'))
+@client.callback_query(StateFilter('time'), F.data.startswith('time_'))
 async def time(callback: CallbackQuery, state: FSMContext):
     await state.update_data(time=callback.data.split('_')[1])
-    await callback.message.answer('Выберите столик:', reply_markup=await kb.table(callback.data.split('_')[1], callback.data.split('_')[2], callback.data.split('_')[3]))
+    image = await photo_id()
+    data = await state.get_data()
+    month = data.get('month')
+    day = data.get('day')
+    await callback.message.answer_photo(photo=image.tg_id, caption='Выберите столик:', reply_markup=await kb.table(callback.data.split('_')[1], month, day))
     await state.set_state('table')
 
 
-@client.message(StateFilter('table'))
+@client.callback_query(StateFilter('table'), F.data.startswith('table_'))
 async def table(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(table=callback.data)
+    await state.update_data(table=callback.data.split('_')[1])
     await callback.message.answer('Введите колличество человек')
     await state.set_state('quantity')
 
 
 @client.message(StateFilter('quantity'))
-async def quantity(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(quantity=callback.data)
-    await callback.message.answer('Добавте коментарий', reply_markup=await kb.comment())
+async def quantity(message: Message, state: FSMContext):
+    await state.update_data(quantity=message.text)
+    await message.answer('Добавте коментарий', reply_markup=await kb.comment())
     await state.set_state('comment')
 
 
+@client.callback_query(StateFilter('comment'), F.data == 'no_comment')
 @client.message(StateFilter('comment'))
-async def comment(callback: CallbackQuery, state: FSMContext):
-    user_name, user_phone = user(callback.from_user.id)
+async def comment(event: Message | CallbackQuery, state: FSMContext):
+    if isinstance(event, Message):
+        comment=event.text
+    else:
+        comment=event.data
+    user =await user_get(event.from_user.id)
     data=await state.get_data()
-    month=await data.get('month'),
-    day=await data.get('day'),
-    time=await data.get('time'),
-    table=await data.get('table'),
-    quantity=await data.get('quantity'),
-    comment=callback.data
-    book = await booking(user_id=callback.from_user.id,
-                  month=month,
-                  day=day,
-                  time=time,
-                  table=table,
-                  quantity=quantity,
-                  comment=comment)
+    month=data['month']
+    day=data['day']
+    time=data['time']
+    table=data['table']
+    quantity=data['quantity']
+    await booking(month, day, time, table, quantity, comment, user.tg_id)
     await state.clear()
-    full_info = f'Клиент: {user_name}\n Номер телефона: {user_phone}\n Месяц: {month}\n Число: {day}\n Время: {time}\n Столик: {table}\n Колличество: {quantity}\n Комментарий: {comment}'
-    await callback.message.bot.send_message(..., text=full_info, reply_markup=await kb.admin(...))
-    await callback.message.answer('Бронь добавлена, ожидайте подтверждения.', reply_markup=await kb.menu)
+    full_info = f'Клиент: {user.name}\n Номер телефона: {user.phone}\n Месяц: {month}\n Число: {day}\n Время: {time}\n Столик: {table}\n Колличество: {quantity}\n Комментарий: {comment}'
+    if isinstance(event, Message):
+        await event.bot.send_message(ADMIN_GROUP, text=full_info)
+        #, reply_markup=await kb.admin(...))
+        await event.answer('Бронь добавлена, ожидайте подтверждения.', reply_markup=kb.menu)
+    else:
+        await event.message.bot.send_message(ADMIN_GROUP, text=full_info)
+        #, reply_markup=await kb.admin(...))
+        await event.message.answer('Бронь добавлена, ожидайте подтверждения.', reply_markup=kb.menu)
 
 
 @client.message(F.text == 'мои брони')

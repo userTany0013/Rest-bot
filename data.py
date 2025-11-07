@@ -1,0 +1,3 @@
+TOKEN = '8225470633:AAHJ4B7dYK3sENAzYnCGMROLzuntnbM_AX8'
+URL = 'sqlite+aiosqlite:///database.db'
+ADMIN_GROUP = -1003247699306

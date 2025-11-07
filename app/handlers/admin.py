@@ -1,9 +1,10 @@
 from aiogram import Router, F
-from aiogram.filters import CommandStart, StateFilter
+from aiogram.filters import StateFilter, Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 import app.keyboards.admin as kb
+from app.database.requests.admin import update_status, get_user_id, get_book, image_set
 
 
 admin = Router()
@@ -50,3 +51,17 @@ async def reason(message: Message, state: FSMContext):
     await message.bot.send_message(user_id, text=f'Сожалеем, запись отменена по причине:\n{cancel_reason}\n\n Месяц: {book.month}\n Число: {book.day}\n Время: {book.time}\n Столик: {book.table}\n Колличество: {book.quantity}\n Комментарий: {book.comment}')
     await message.answer('Бронь отменена')
     await state.clear()
+
+
+@admin.message(Command('now_image'))
+async def now_image(massage: Message, state: FSMContext):
+ await massage.answer('Отправте новое фото:')
+ await state.set_state('image')
+
+
+@admin.message(F.photo, StateFilter('image'))
+async def set_image(massage: Message, state: FSMContext):
+ image_id = massage.photo[-1].file_id
+ await image_set(image_id)
+ await massage.answer('Фото добавлено')
+ state.clear()

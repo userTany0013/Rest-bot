@@ -7,13 +7,15 @@ from app.handlers.admin import admin
 
 from app.database.models import init_models
 
+from data import TOKEN
+
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
 
 
 async def main():
-    bot = Bot(token='')
+    bot = Bot(token=TOKEN)
     dp = Dispatcher()
     dp.include_routers(client, admin)
     dp.startup.register(startup)

@@ -38,7 +38,7 @@ async def month():
     available_months =await get_months()
     keyboard = InlineKeyboardBuilder()
     for month in available_months:
-        keyboard.add(InlineKeyboardButton(text=f'{month.name}',
+        keyboard.add(InlineKeyboardButton(text=f'{month.month}',
                                            callback_data=f'month_{month.id}'))
     return keyboard.adjust(2).as_markup()
 
@@ -48,7 +48,7 @@ async def day(month):
     keyboard = InlineKeyboardBuilder()
     for day in available_days:
         keyboard.add(InlineKeyboardButton(text=f'{day}',
-                                           callback_data=f'day_{day}_{month}'))
+                                           callback_data=f'day_{day}'))
     return keyboard.adjust(2).as_markup()
 
 
@@ -56,17 +56,17 @@ async def time(day, month):
     times =await get_times(day, month)
     keyboard = InlineKeyboardBuilder()
     for time in times:
-        keyboard.add(InlineKeyboardButton(text=f'{time.name}',
-                                           callback_data=f'time_{time.id}_{day}_{month}'))
+        keyboard.add(InlineKeyboardButton(text=f'{time.hour}, {time.minute}',
+                                           callback_data=f'time_{time.id}'))
     return keyboard.adjust(2).as_markup()
 
 
 async def table(time, day, month):
-    tables = await get_tables(time)
+    tables = await get_tables(time, day, month)
     keyboard = InlineKeyboardBuilder()
     for table in tables:
-        keyboard.add(InlineKeyboardButton(text=f'{table.name}',
-                                           callback_data=f'table_{table.id}'))
+        keyboard.add(InlineKeyboardButton(text=f'{table}',
+                                           callback_data=f'table_{table}'))
     return keyboard.adjust(2).as_markup()
 
 
@@ -79,7 +79,7 @@ async def comment():
 async def books(user):
     user_books = await get_books(user)
     keyboard = InlineKeyboardBuilder()
-    for book in books:
+    for book in user_books:
         keyboard.add(InlineKeyboardButton(text=f'Дата:{book.month}, {book.day}\nВремя:{book.time}', callback_data=f'book_{book.id}'))
     return keyboard.adjust(2).as_markup()
 
