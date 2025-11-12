@@ -25,16 +25,19 @@ async def user_get(tg_id):
 
 async def booking(month, day, time, table, quantity, comment, user_tg):
     async with async_session() as session:
-        # date = await session.scalar(select(Date).where(Date.id==month))
-        session.add(Book(user_tg=user_tg,
+        book_obj = Book(user_tg=user_tg,
                   date=month,
                   day=day,
                   time=time,
                   table=table,
                   quantity=quantity,
                   status='expectation',
-                  comment=comment))
+                  comment=comment)
+        session.add(book_obj)
+        print(book_obj)
         await session.commit()
+        await session.refresh(book_obj)
+        return book_obj.id
 
 
 async def get_book(book):
@@ -56,7 +59,9 @@ async def update_comment(book, message_text):
 
 async def delete_book(book):
     async with async_session() as session:
-        await session.delete(select(Book).where(Book.id==book))
+        print('-')
+        await session.delete(await session.scalar(select(Book).where(Book.id==book)))
+        print('-')
         await session.commit()
 
 
@@ -100,30 +105,33 @@ async def get_times(day, monts):
         monts_now = datetime.now().month
         day_now = datetime.now().day
         if year_now == book_date.year:
-            print('+')
             if monts_now == book_date.month:
-                print('+')
-                if day_now == day:
-                    print('+')
+                if day_now == int(day):
                     now = datetime.now().time()
                     for time in times_in_dey:
                         if time.hour >= now.hour:  
-                            times.append(time)
+                            times.append(time.id)
                 else:
                     for time in times_in_dey:
-                        times.append(time)
+                        times.append(time.id)
             else:
                 for time in times_in_dey:
-                    times.append(time)
+                    times.append(time.id)
         else:
             for time in times_in_dey:
-                    times.append(time)
-            return times
+                    times.append(time.id)
+        return times
+
+
+async def get_time(time):
+    async with async_session() as session:
+        return await session.scalar(select(Time).where(Time.id==time))
 
 
 async def get_tables(time, day, monts):
     async with async_session() as session:
         all_tables = []
+        print(time, day, monts)
         tables = await session.scalars(select(Table))
         occupied = await session.scalars(select(Book).where(Book.date==monts, Book.day==day, Book.time==time))
         occupied_tables = []
